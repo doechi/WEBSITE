@@ -11,11 +11,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clickScreen.addEventListener('click', () => {
     clickScreen.remove();
-    video.play();
+
+    // Unlock the audio element while we have a direct user gesture
+    song.play().then(() => song.pause()).catch(() => {});
+    song.currentTime = 0;
+
+    video.play().catch(() => {
+      dismissOverlay();
+      song.play();
+    });
   });
 
   video.addEventListener('ended', () => {
     dismissOverlay();
     song.play();
   });
+
+  video.addEventListener('error', () => { dismissOverlay(); song.play(); });
+
+  const source = video.querySelector('source');
+  if (source) source.addEventListener('error', () => { dismissOverlay(); song.play(); });
 });
