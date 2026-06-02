@@ -41,5 +41,5 @@ html, body {
 @media (max-width: 768px) {
   #bg { display: none; }
   #bg-phone { display: block; }
-  #random-video { display: none; }
+  #random-video { display: none !important; visibility: hidden !important; }
 }
