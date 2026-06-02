@@ -39,6 +39,8 @@ const videos = [
 
 const video = document.getElementById('random-video');
 
+const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
 function pickRandom(exclude) {
   const pool = exclude ? videos.filter(v => v !== exclude) : videos;
   return pool[Math.floor(Math.random() * pool.length)];
@@ -49,8 +51,10 @@ function loadVideo(src) {
   video.play().catch(() => {});
 }
 
-loadVideo(pickRandom());
+if (!isMobile) {
+  loadVideo(pickRandom());
 
-video.addEventListener('click', () => {
-  loadVideo(pickRandom(video.src.split('/').slice(-2).join('/')));
-});
+  video.addEventListener('click', () => {
+    loadVideo(pickRandom(video.src.split('/').slice(-2).join('/')));
+  });
+}
