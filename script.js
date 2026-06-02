@@ -51,10 +51,8 @@ function loadVideo(src) {
   video.play().catch(() => {});
 }
 
-if (!isMobile) {
-  loadVideo(pickRandom());
+loadVideo(pickRandom());
 
-  video.addEventListener('click', () => {
-    loadVideo(pickRandom(video.src.split('/').slice(-2).join('/')));
-  });
-}
+video.addEventListener('click', () => {
+  loadVideo(pickRandom(video.src.split('/').slice(-2).join('/')));
+});
