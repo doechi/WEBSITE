@@ -41,5 +41,11 @@ html, body {
 @media (max-width: 768px) {
   #bg { display: none; }
   #bg-phone { display: block; }
-  #random-video { display: none !important; visibility: hidden !important; }
+  #random-video {
+    height: 170px !important;
+    width: auto !important;
+    max-width: 100vw !important;
+    max-height: 170px !important;
+    object-fit: contain !important;
+  }
 }
