@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    html, body { background: #fff; transition: background 0.5s ease; }
+
+    #site-title { color: #000; }
+    #top-line { background: rgba(0,0,0,0.3); }
+    #top-nav a, #top-nav span { color: #000; }
+
+    #cursor { background: #fff; mix-blend-mode: difference; }
+
+    #logo-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 2s ease;
+      z-index: 19;
+      pointer-events: none;
+    }
+
+    #fade-image {
+      max-height: 85vh;
+      max-width: 85vw;
+      object-fit: contain;
+      display: block;
+      transition: transform 0.2s ease;
+      clip-path: circle(42% at 50% 50%);
+    }
+
+    #fade-image:hover {
+      transform: scale(1.04);
+    }
+
+    #timer-arrow {
+      position: fixed;
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+      transform: rotate(180deg);
+      cursor: none;
+    }
+
+    #ui {
+      transition: opacity 1s ease;
+    }
+
+    #top-bar {
+      transition: opacity 1s ease;
+    }
+
+    #timer-display {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: fit-content;
+      color: #000;
+      font-family: monospace;
+      font-size: 160px;
+      letter-spacing: 0.05em;
+      pointer-events: none;
+      z-index: 20;
+      user-select: none;
+      transition: opacity 1s ease;
+    }
+
+    #timer-display.under-photo:hover::after {
+      content: '';
+      display: block;
+      height: 2px;
+      background: #000;
+      margin-top: 1px;
+    }
+
+    #timer-display.under-photo {
+      top: calc(50% + 36vh);
+      transform: translate(-50%, 0);
+      font-size: 48px;
+    }
+
+    /* Arrow overlay — same center as #timer-display */
+    #time-setter {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 160px;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      z-index: 21;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #time-setter.hidden { opacity: 0; pointer-events: none; }
+
+    .ts-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ts-spacer {
+      visibility: hidden;
+    }
+
+    .ts-arrow {
+      font-size: 20px;
+      color: #000;
+      user-select: none;
+      line-height: 1;
+      transition: transform 0.2s ease;
+      pointer-events: all;
+    }
+
+    .ts-arrow:hover { transform: scale(1.4); }
+
+    #timer-controls {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 24px;
+      z-index: 20;
+    }
+
+    #timer-controls button {
+      background: none;
+      border: 1px solid rgba(0,0,0,0.4);
+      color: #000;
+      font-family: sans-serif;
+      font-size: 11.7px;
+      letter-spacing: 0.08em;
+      padding: 6px 18px;
+      cursor: none;
+      transition: border-color 0.15s, opacity 0.15s;
+      opacity: 0.9;
+    }
+
+    #timer-controls button:hover {
+      border-color: rgba(0,0,0,0.9);
+    }
+
+    #track-hint {
+      position: fixed;
+      bottom: 12px;
+      left: 22px;
+      font-family: sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(0,0,0,0.45);
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    #volume-dial {
+      position: fixed;
+      left: 32px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      opacity: 0;
+      transition: opacity 1s ease;
+      z-index: 20;
+    }
+
+    .vol-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 10px;
+    }
+
+    .vol-block {
+      width: 20px;
+      height: 20px;
+      background: #000;
+      opacity: 0.1;
+      transition: opacity 0.1s ease;
+    }
+
+    .vol-block.active { opacity: 1; }
+
+    .vol-btn {
+      font-family: sans-serif;
+      font-size: 18px;
+      font-weight: 300;
+      color: #000;
+      line-height: 1.4;
+      user-select: none;
+      opacity: 0.8;
+    }
+
+    .vol-btn:hover { opacity: 1; }
+
+    #setup-label {
+      position: fixed;
+      top: calc(50% - 130px);
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: #000;
+      z-index: 21;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #setup-label.hidden { opacity: 0; }
+
+    #phase-label {
+      position: fixed;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: rgba(0,0,0,0.45);
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="top-bar">
+    <div id="site-title">Timer</div>
+    <div id="top-line"></div>
+    <nav id="top-nav">
+      <a href="index.html">Menu</a>
+      <span>Gambling Game</span>
+      <a href="AccessFootage.html">Random Access Footage</a>
+      <span>Puzzle Solver</span>
+      <span>Support</span>
+    </nav>
+  </div>
+
+  <div id="ui">
+    <div id="timer-controls">
+      <button id="btn-start">Start</button>
+      <button id="btn-pause" style="display:none">Pause</button>
+      <button id="btn-reset" style="display:none">Reset</button>
+    </div>
+  </div>
+
+  <div id="setup-label">WORK</div>
+
+  <div id="timer-display">00:00</div>
+
+  <!-- Arrow overlay for setting time before start -->
+  <div id="time-setter">
+    <div class="ts-unit">
+      <div class="ts-arrow" data-unit="h" data-dir="1">▲</div>
+      <span class="ts-spacer">00</span>
+      <div class="ts-arrow" data-unit="h" data-dir="-1">▼</div>
+    </div>
+    <span class="ts-spacer">:</span>
+    <div class="ts-unit">
+      <div class="ts-arrow" data-unit="m" data-dir="1">▲</div>
+      <span class="ts-spacer">00</span>
+      <div class="ts-arrow" data-unit="m" data-dir="-1">▼</div>
+    </div>
+  </div>
+
+  <div id="logo-container">
+    <img id="fade-image" src="Timer/aphex-twin-logo-png-transparent.png" />
+  </div>
+  <img id="timer-arrow" src="Timer/arrow.png" />
+
+  <div id="volume-dial">
+    <div class="vol-blocks">
+      <div class="vol-block" data-step="10"></div>
+      <div class="vol-block" data-step="9"></div>
+      <div class="vol-block" data-step="8"></div>
+      <div class="vol-block" data-step="7"></div>
+      <div class="vol-block" data-step="6"></div>
+      <div class="vol-block" data-step="5"></div>
+      <div class="vol-block" data-step="4"></div>
+      <div class="vol-block" data-step="3"></div>
+      <div class="vol-block" data-step="2"></div>
+      <div class="vol-block" data-step="1"></div>
+    </div>
+    <div id="vol-plus" class="vol-btn">+</div>
+    <div id="vol-minus" class="vol-btn">−</div>
+  </div>
+
+  <div id="phase-label">WORK</div>
+  <div id="track-hint">← → switch tracks</div>
+  <div id="cursor"></div>
+
+  <script>
+    const ui = document.getElementById('ui');
+    const topBar = document.getElementById('top-bar');
+    const display = document.getElementById('timer-display');
+    const timeSetter = document.getElementById('time-setter');
+    const fadeImage = document.getElementById('fade-image');
+    const logoContainer = document.getElementById('logo-container');
+    const timerArrow = document.getElementById('timer-arrow');
+    const volumeDial = document.getElementById('volume-dial');
+    const trackHint = document.getElementById('track-hint');
+    const phaseLabel = document.getElementById('phase-label');
+    const setupLabel = document.getElementById('setup-label');
+
+    function positionArrow() {
+      const rect = fadeImage.getBoundingClientRect();
+      timerArrow.style.left = (rect.right + 16) + 'px';
+      timerArrow.style.top = rect.top + 'px';
+      timerArrow.style.height = rect.height + 'px';
+      timerArrow.style.width = 'auto';
+    }
+    fadeImage.addEventListener('load', positionArrow);
+    window.addEventListener('resize', positionArrow);
+
+    // ── Volume dial ──────────────────────────────────────────────
+    const VOL_STEPS = 10;
+    const volBlocks = Array.from(document.querySelectorAll('.vol-block'));
+    const volPlus = document.getElementById('vol-plus');
+    const volMinus = document.getElementById('vol-minus');
+    let dialVolume = 0.5;
+    let dialStep = 5;
+
+    function updateDialDisplay(step) {
+      dialStep = Math.max(0, Math.min(VOL_STEPS, step));
+      dialVolume = dialStep / VOL_STEPS;
+      volBlocks.forEach((b) => {
+        const s = parseInt(b.dataset.step);
+        b.classList.toggle('active', s <= dialStep);
+      });
+    }
+
+    updateDialDisplay(5);
+
+    volPlus.addEventListener('click', (e) => {
+      if (!logoShownOnce) return;
+      e.stopPropagation();
+      updateDialDisplay(dialStep + 1);
+      if (!fadeImage.src.includes('Mute')) audio.volume = dialVolume;
+    });
+
+    volMinus.addEventListener('click', (e) => {
+      if (!logoShownOnce) return;
+      e.stopPropagation();
+      updateDialDisplay(dialStep - 1);
+      if (!fadeImage.src.includes('Mute')) audio.volume = dialVolume;
+    });
+    // ────────────────────────────────────────────────────────────
+
+    // ── Time-setter arrows ───────────────────────────────────────
+    let workH = 0, workM = 0, breakH = 0, breakM = 0;
+    let setupStep = 'work'; // 'work' or 'break'
+    let runPhase = 'work';
+
+    document.querySelectorAll('.ts-arrow').forEach(btn => {
+      let holdTimeout = null;
+      let holdInterval = null;
+
+      function step() {
+        const dir = parseInt(btn.dataset.dir);
+        if (setupStep === 'work') {
+          if (btn.dataset.unit === 'h') workH = Math.max(0, Math.min(99, workH + dir));
+          else workM = Math.max(0, Math.min(59, workM + dir));
+          updateDisplayShort((workH * 3600 + workM * 60) * 1000);
+        } else {
+          if (btn.dataset.unit === 'h') breakH = Math.max(0, Math.min(99, breakH + dir));
+          else breakM = Math.max(0, Math.min(59, breakM + dir));
+          updateDisplayShort((breakH * 3600 + breakM * 60) * 1000);
+        }
+        const s = clickSound.cloneNode();
+        s.volume = 0.25;
+        s.play().catch(() => {});
+      }
+
+      btn.addEventListener('click', (e) => e.stopPropagation());
+
+      function stopHold() {
+        clearTimeout(holdTimeout);
+        clearInterval(holdInterval);
+        holdTimeout = null;
+        holdInterval = null;
+      }
+
+      btn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        step();
+        holdTimeout = setTimeout(() => {
+          holdInterval = setInterval(step, 80);
+        }, 400);
+      });
+
+      btn.addEventListener('mouseup', stopHold);
+      btn.addEventListener('mouseleave', stopHold);
+    });
+    // ────────────────────────────────────────────────────────────
+
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+    const btnReset = document.getElementById('btn-reset');
+
+    let totalSeconds = 0;
+    let remaining = 0;
+    let interval = null;
+    let running = false;
+    let started = false;
+
+    const clickSound = new Audio('clickSound.mp3');
+    clickSound.volume = 0.5;
+    document.addEventListener('click', () => {
+      clickSound.currentTime = 0;
+      clickSound.play().catch(() => {});
+    });
+
+    const IMG_LOGO = 'Timer/aphex-twin-logo-png-transparent.png';
+
+    const SONGS = [
+      'Timer/Music/AphexTwin/Actium.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Ageispolis.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Delphium.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Green Calx.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Hedphelym.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Heliosphan.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - I.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Ptolemy.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Pulsewidth.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - Schottkey 7th Path.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin - We Are The Music Makers.mp3',
+      'Timer/Music/AphexTwin/Aphex twin - Xtal.mp3',
+      'Timer/Music/AphexTwin/Aphex Twin -Tha.mp3',
+    ];
+
+    const audio = new Audio();
+    audio.volume = 0.5;
+    let currentSongIndex = -1;
+    let songHistory = [];
+    let historyPos = -1;
+
+    function playRandomSong() {
+      let next;
+      do { next = Math.floor(Math.random() * SONGS.length); } while (next === currentSongIndex && SONGS.length > 1);
+      currentSongIndex = next;
+      songHistory = songHistory.slice(0, historyPos + 1);
+      songHistory.push(next);
+      historyPos = songHistory.length - 1;
+      audio.src = SONGS[currentSongIndex];
+      audio.play().catch(() => {});
+    }
+
+    function playPreviousSong() {
+      if (historyPos <= 0) return;
+      historyPos--;
+      currentSongIndex = songHistory[historyPos];
+      audio.src = SONGS[currentSongIndex];
+      audio.play().catch(() => {});
+    }
+
+    audio.addEventListener('ended', playRandomSong);
+    const IMG_STOP = 'Timer/stop.png';
+    const IMG_MUTE = 'Timer/Mute.png';
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function updateDisplay(ms) {
+      const totalSecs = Math.floor(ms / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      const cs = Math.floor((ms % 1000) / 10);
+      display.textContent = `${pad(h)}:${pad(m)}:${pad(s)}.${pad(cs)}`;
+    }
+
+    function updateDisplayShort(ms) {
+      const totalSecs = Math.floor(ms / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      display.textContent = `${pad(h)}:${pad(m)}`;
+    }
+
+    function getInputMs() {
+      return (workH * 3600 + workM * 60) * 1000;
+    }
+
+    let endTime = 0;
+
+    function startInterval() {
+      endTime = Date.now() + remaining;
+      interval = setInterval(() => {
+        remaining = endTime - Date.now();
+        if (remaining <= 0) {
+          clearInterval(interval);
+          remaining = 0;
+          running = false;
+          if (runPhase === 'work' && (breakH > 0 || breakM > 0)) {
+            runPhase = 'break';
+            phaseLabel.textContent = 'BREAK';
+            document.body.style.transition = 'background 3s ease';
+            document.body.style.background = '#C0D530';
+            setTimeout(() => { document.body.style.transition = ''; }, 3000);
+            swapping = true;
+            logoContainer.style.transition = 'none';
+            let f = 0;
+            function doFlash() {
+              logoContainer.style.opacity = '1';
+              setTimeout(() => {
+                logoContainer.style.opacity = '0';
+                setTimeout(() => {
+                  if (++f < 6) {
+                    doFlash();
+                  } else {
+                    logoContainer.style.opacity = '1';
+                    setTimeout(() => {
+                      logoContainer.style.transition = '';
+                      swapping = false;
+                      remaining = (breakH * 3600 + breakM * 60) * 1000;
+                      running = true;
+                      startInterval();
+                    }, 50);
+                  }
+                }, 500);
+              }, 500);
+            }
+            doFlash();
+          } else if (runPhase === 'break') {
+            runPhase = 'work';
+            phaseLabel.textContent = 'WORK';
+            document.body.style.transition = 'background 3s ease';
+            document.body.style.background = '#fff';
+            setTimeout(() => { document.body.style.transition = ''; }, 3000);
+            swapping = true;
+            logoContainer.style.transition = 'none';
+            let f2 = 0;
+            function doFlash2() {
+              logoContainer.style.opacity = '1';
+              setTimeout(() => {
+                logoContainer.style.opacity = '0';
+                setTimeout(() => {
+                  if (++f2 < 6) {
+                    doFlash2();
+                  } else {
+                    logoContainer.style.opacity = '1';
+                    setTimeout(() => {
+                      logoContainer.style.transition = '';
+                      swapping = false;
+                      remaining = (workH * 3600 + workM * 60) * 1000;
+                      if (remaining > 0) { running = true; startInterval(); }
+                      else display.textContent = 'Done';
+                    }, 50);
+                  }
+                }, 500);
+              }, 500);
+            }
+            doFlash2();
+          } else {
+            display.textContent = 'Done';
+          }
+          return;
+        }
+        updateDisplay(remaining);
+      }, 10);
+    }
+
+    btnStart.textContent = 'Next';
+
+    btnStart.addEventListener('click', () => {
+      if (running) return;
+
+      // Step 1 → Step 2: work time set, move to break setup
+      if (setupStep === 'work') {
+        setupStep = 'break';
+        setupLabel.textContent = 'BREAK';
+        btnStart.textContent = 'Start';
+        document.body.style.background = '#C0D530';
+        updateDisplayShort((breakH * 3600 + breakM * 60) * 1000);
+        return;
+      }
+
+      // Step 2: actually start
+      if (remaining === 0) {
+        totalSeconds = getInputMs();
+        remaining = totalSeconds;
+      }
+      if (remaining === 0) return;
+      runPhase = 'work';
+      phaseLabel.textContent = 'WORK';
+      document.body.style.background = '#fff';
+      running = true;
+      started = true;
+      timeSetter.classList.add('hidden');
+      setupLabel.classList.add('hidden');
+      ui.style.opacity = '0';
+      fadeImage.src = IMG_LOGO;
+      startInterval();
+      clearTimeout(fadeTimeout);
+      fadeTimeout = setTimeout(() => {
+        ui.style.opacity = '0';
+        topBar.style.opacity = '0';
+        display.style.opacity = '0';
+        logoContainer.style.opacity = '1';
+        positionArrow();
+        if (!logoShownOnce) playRandomSong();
+        logoShownOnce = true;
+      }, 5000);
+    });
+
+    let swapping = false;
+    let logoBeforePause = IMG_LOGO;
+
+    function swapLogo(newSrc, newPointerEvents) {
+      swapping = true;
+      logoContainer.style.transition = 'opacity 0.6s ease';
+      logoContainer.style.opacity = '0';
+      setTimeout(() => {
+        fadeImage.src = newSrc;
+        logoContainer.style.pointerEvents = newPointerEvents;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          logoContainer.style.opacity = '1';
+          setTimeout(() => {
+            logoContainer.style.transition = '';
+            swapping = false;
+          }, 600);
+        }));
+      }, 600);
+    }
+
+    function pause() {
+      if (!running) return;
+      clearInterval(interval);
+      remaining = endTime - Date.now();
+      running = false;
+      if (logoShownOnce) {
+        logoBeforePause = fadeImage.src.includes('Mute') ? IMG_MUTE : IMG_LOGO;
+        swapLogo(IMG_STOP, 'auto');
+        audio.pause();
+      }
+    }
+
+    function resume() {
+      if (running || remaining === 0) return;
+      running = true;
+      if (logoShownOnce) {
+        swapLogo(logoBeforePause, 'auto');
+        if (logoBeforePause !== IMG_MUTE) audio.volume = dialVolume;
+        audio.play().catch(() => {});
+      }
+      startInterval();
+    }
+
+    btnPause.addEventListener('click', pause);
+
+    fadeImage.addEventListener('click', () => {
+      if (!logoShownOnce) return;
+      if (running) {
+        if (fadeImage.src.includes('aphex-twin')) {
+          swapLogo(IMG_MUTE, 'auto');
+          audio.volume = 0;
+          volumeDial.style.opacity = '0';
+        } else if (fadeImage.src.includes('Mute')) {
+          swapLogo(IMG_LOGO, 'auto');
+          audio.volume = dialVolume;
+        }
+      } else if (fadeImage.src.includes('stop')) {
+        btnReset.click();
+      }
+    });
+
+    display.addEventListener('click', () => {
+      if (logoShownOnce) {
+        if (running) pause(); else resume();
+      }
+    });
+
+    btnReset.addEventListener('click', () => {
+      clearInterval(interval);
+      clearTimeout(fadeTimeout);
+      swapping = false;
+      running = false;
+      started = false;
+      remaining = 0;
+      logoBeforePause = IMG_LOGO;
+      workH = 0; workM = 0; breakH = 0; breakM = 0;
+      setupStep = 'work'; runPhase = 'work';
+      document.body.style.background = '#fff';
+      setupLabel.textContent = 'WORK';
+      setupLabel.classList.remove('hidden');
+      btnStart.textContent = 'Next';
+      timeSetter.classList.remove('hidden');
+      phaseLabel.style.opacity = '0';
+      phaseLabel.textContent = 'WORK';
+      display.classList.remove('under-photo');
+      display.style.pointerEvents = 'none';
+      display.style.opacity = '1';
+      ui.style.opacity = '1';
+      topBar.style.opacity = '1';
+      btnPause.style.display = 'none';
+      btnReset.style.display = 'none';
+      updateDialDisplay(5);
+      volumeDial.style.opacity = '0';
+      audio.volume = 0.5;
+      audio.pause();
+      audio.currentTime = 0;
+      logoContainer.style.pointerEvents = 'none';
+      logoContainer.style.transition = 'none';
+      logoContainer.style.opacity = '0';
+      fadeImage.src = IMG_LOGO;
+      logoShownOnce = false;
+      setTimeout(() => {
+        logoContainer.style.transition = '';
+        resetFade();
+      }, 50);
+      updateDisplayShort(0);
+    });
+
+    updateDisplayShort(0);
+
+    let fadeTimeout;
+    let logoShownOnce = false;
+
+    function resetFade() {
+      if (!logoShownOnce) return;
+      clearTimeout(fadeTimeout);
+      if (!swapping) logoContainer.style.opacity = '1';
+      if (started) {
+        ui.style.opacity = '0';
+        display.style.opacity = '1';
+        display.style.pointerEvents = 'auto';
+        topBar.style.opacity = '1';
+        trackHint.style.opacity = '1';
+        phaseLabel.style.opacity = '1';
+        volumeDial.style.opacity = fadeImage.src.includes('Mute') ? '0' : '1';
+        display.classList.add('under-photo');
+        if (!swapping) {
+          logoContainer.style.opacity = '1';
+          logoContainer.style.pointerEvents = 'auto';
+        }
+        fadeTimeout = setTimeout(() => {
+          display.style.opacity = '0';
+          topBar.style.opacity = '0';
+          trackHint.style.opacity = '0';
+          phaseLabel.style.opacity = '0';
+          volumeDial.style.opacity = '0';
+        }, 4000);
+      } else {
+        ui.style.opacity = '1';
+        topBar.style.opacity = '1';
+        display.style.opacity = '1';
+        display.classList.remove('under-photo');
+        fadeTimeout = setTimeout(() => {
+          ui.style.opacity = '0';
+          topBar.style.opacity = '0';
+          display.style.opacity = '0';
+        }, 4000);
+      }
+    }
+    document.addEventListener('keydown', (e) => {
+      if (!logoShownOnce) return;
+      if (e.key === 'ArrowRight') playRandomSong();
+      if (e.key === 'ArrowLeft') playPreviousSong();
+    });
+
+    document.addEventListener('mousemove', () => { if (logoShownOnce) resetFade(); });
+    resetFade();
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>
